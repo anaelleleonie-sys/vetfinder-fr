@@ -52,6 +52,24 @@ function haversine(lat1, lon1, lat2, lon2){
   return 2*R*Math.asin(Math.sqrt(a));
 }
 
+// ---- Patch: réparer les URL + toujours proposer Recherche Google ----
+function fixedUrl(u){
+  if(!u) return '';
+  u = u.trim();
+  if(/^https?:\/\//i.test(u)) return u;
+  if(u.startsWith('www.')) return 'https://' + u;
+  if(/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(u)) return 'https://' + u;
+  return '';
+}
+function siteAndFallback(r){
+  const addr = r.address || '';
+  const g = `<a href="https://www.google.com/search?q=${encodeURIComponent(r.name + ' vétérinaire ' + addr)}" target="_blank" rel="noreferrer">Recherche Google</a>`;
+  const url = fixedUrl(r.website);
+  const site = url ? `<a href="${url}" target="_blank" rel="noreferrer">${hostname(url)}</a>` : '';
+  return [site, g].filter(Boolean).join(' • ');
+}
+// --------------------------------------------------------------------
+
 async function loadData(){
   const res = await fetch(DATA_URL);
   if(!res.ok) throw new Error('Impossible de charger les données.');
@@ -77,15 +95,13 @@ function render(list){
     name.className = 'name';
     name.textContent = r.name;
 
-    const site = r.website ? `<a href="${r.website}" target="_blank" rel="noreferrer">${hostname(r.website)}</a>` : `<a href="https://www.google.com/search?q=${encodeURIComponent(r.name + ' vétérinaire ')}" target="_blank" rel="noreferrer">Recherche Google</a>`;
-
     const distKm = (r._dist/1000).toFixed(1);
 
     const meta = document.createElement('div');
     meta.className = 'meta';
     meta.innerHTML = [
       r.address || 'Adresse non renseignée',
-      site,
+      siteAndFallback(r),
       r.phone ? `<a href="tel:${r.phone}">${r.phone}</a>` : '',
       `${distKm} km`
     ].filter(Boolean).join(' • ');
